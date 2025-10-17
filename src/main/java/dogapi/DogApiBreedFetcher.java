@@ -1,5 +1,6 @@
 package dogapi;
 
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -17,19 +18,47 @@ import java.util.*;
 public class DogApiBreedFetcher implements BreedFetcher {
     private final OkHttpClient client = new OkHttpClient();
 
-    /**
-     * Fetch the list of sub breeds for the given breed from the dog.ceo API.
-     * @param breed the breed to fetch sub breeds for
-     * @return list of sub breeds for the given breed
-     * @throws BreedNotFoundException if the breed does not exist (or if the API call fails for any reason)
-     */
     @Override
     public List<String> getSubBreeds(String breed) {
-        // TODO Task 1: Complete this method based on its provided documentation
-        //      and the documentation for the dog.ceo API. You may find it helpful
-        //      to refer to the examples of using OkHttpClient from the last lab,
-        //      as well as the code for parsing JSON responses.
-        // return statement included so that the starter code can compile and run.
-        return new ArrayList<>();
+        String url = "https://dog.ceo/api/breed/" + breed.toLowerCase() + "/list";
+        Request request = new Request.Builder().url(url).build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                throw new BreedNotFoundException("Failed to fetch breed: " + breed);
+            }
+
+            String jsonData = response.body().string();
+            JSONObject json = new JSONObject(jsonData);
+
+            if (!json.getString("status").equals("success")) {
+                throw new BreedNotFoundException("Breed not found: " + breed);
+            }
+
+            JSONArray subBreedsJson = json.getJSONArray("message");
+            List<String> subBreeds = new ArrayList<>();
+
+            for (int i = 0; i < subBreedsJson.length(); i++) {
+                subBreeds.add(subBreedsJson.getString(i));
+            }
+
+            return subBreeds;
+        } catch (IOException e) {
+            throw new BreedNotFoundException("Error fetching data for breed: " + breed);
+        }
+    }
+    public String run(String baseURL, String paramKey, String paramValue) throws IOException {
+        HttpUrl url = HttpUrl.parse(baseURL).newBuilder()
+                .addQueryParameter(paramKey, paramValue)
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader(paramKey, paramValue)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            return response.body().string();
+        }
     }
 }
