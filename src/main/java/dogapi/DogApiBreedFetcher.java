@@ -19,32 +19,31 @@ public class DogApiBreedFetcher implements BreedFetcher {
     private final OkHttpClient client = new OkHttpClient();
 
     @Override
-    public List<String> getSubBreeds(String breed) {
+    public List<String> getSubBreeds(String breed) throws BreedFetcher.BreedNotFoundException {
         String url = "https://dog.ceo/api/breed/" + breed.toLowerCase() + "/list";
         Request request = new Request.Builder().url(url).build();
 
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) {
-                throw new BreedNotFoundException("Failed to fetch breed: " + breed);
+                throw new BreedFetcher.BreedNotFoundException(breed);
             }
 
             String jsonData = response.body().string();
             JSONObject json = new JSONObject(jsonData);
 
             if (!json.getString("status").equals("success")) {
-                throw new BreedNotFoundException("Breed not found: " + breed);
+                throw new BreedFetcher.BreedNotFoundException(breed);
             }
 
             JSONArray subBreedsJson = json.getJSONArray("message");
             List<String> subBreeds = new ArrayList<>();
-
             for (int i = 0; i < subBreedsJson.length(); i++) {
                 subBreeds.add(subBreedsJson.getString(i));
             }
 
             return subBreeds;
         } catch (IOException e) {
-            throw new BreedNotFoundException("Error fetching data for breed: " + breed);
+            throw new BreedFetcher.BreedNotFoundException(breed);
         }
     }
     public String run(String baseURL, String paramKey, String paramValue) throws IOException {
